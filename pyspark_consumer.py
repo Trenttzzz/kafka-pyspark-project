@@ -9,6 +9,9 @@ if __name__ == "__main__":
         .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0") \
         .config("spark.sql.streaming.checkpointLocation", "/tmp/spark-checkpoint") \
         .config("spark.sql.session.timeZone", "UTC") \
+        .config("spark.sql.shuffle.partitions", "4") \
+        .config("spark.default.parallelism", "4") \
+        .config("spark.streaming.backpressure.enabled", "true") \
         .getOrCreate()
         # Pastikan versi spark-sql-kafka-0-10_2.12 cocok dengan versi Spark Anda (3.5.0 dalam contoh ini)
         # Jika image jupyter/pyspark-notebook sudah menyertakan paket ini, baris .config("spark.jars.packages", ...) mungkin tidak diperlukan.
@@ -37,7 +40,8 @@ if __name__ == "__main__":
         .format("kafka") \
         .option("kafka.bootstrap.servers", "kafka:9092") \
         .option("subscribe", "sensor-suhu-gudang") \
-        .option("startingOffsets", "latest") \
+        .option("startingOffsets", "earliest") \
+        .option("maxOffsetsPerTrigger", "100") \
         .load()
 
     df_suhu = df_suhu_raw \
@@ -52,7 +56,8 @@ if __name__ == "__main__":
         .format("kafka") \
         .option("kafka.bootstrap.servers", "kafka:9092") \
         .option("subscribe", "sensor-kelembaban-gudang") \
-        .option("startingOffsets", "latest") \
+        .option("startingOffsets", "earliest") \
+        .option("maxOffsetsPerTrigger", "100") \
         .load()
 
     df_kelembaban = df_kelembaban_raw \
@@ -65,24 +70,26 @@ if __name__ == "__main__":
     df_peringatan_suhu = df_suhu.filter(col("suhu") > 80)
 
     query_peringatan_suhu = df_peringatan_suhu \
-        .selectExpr("'[Peringatan Suhu Tinggi] Gudang ' || gudang_id || ': Suhu ' || suhu || '°C' as message") \
+        .selectExpr("CAST(gudang_id AS STRING) as gudang_id_str", "CAST(suhu AS STRING) as suhu_str") \
+        .selectExpr("'[Peringatan Suhu Tinggi] Gudang ' || gudang_id_str || ': Suhu ' || suhu_str || '°C' as message") \
         .writeStream \
         .outputMode("append") \
         .format("console") \
         .option("truncate", "false") \
-        .trigger(processingTime="5 seconds") \
+        .trigger(processingTime="10 seconds") \
         .start()
 
     # --- 3b. Filtering: Kelembaban > 70% ---
     df_peringatan_kelembaban = df_kelembaban.filter(col("kelembaban") > 70)
 
     query_peringatan_kelembaban = df_peringatan_kelembaban \
-        .selectExpr("'[Peringatan Kelembaban Tinggi] Gudang ' || gudang_id || ': Kelembaban ' || kelembaban || '%' as message") \
+        .selectExpr("CAST(gudang_id AS STRING) as gudang_id_str", "CAST(kelembaban AS STRING) as kelembaban_str") \
+        .selectExpr("'[Peringatan Kelembaban Tinggi] Gudang ' || gudang_id_str || ': Kelembaban ' || kelembaban_str || '%' as message") \
         .writeStream \
         .outputMode("append") \
         .format("console") \
         .option("truncate", "false") \
-        .trigger(processingTime="5 seconds") \
+        .trigger(processingTime="10 seconds") \
         .start()
 
     # --- 4. Gabungkan Stream dari Dua Sensor (Join) ---
@@ -151,7 +158,7 @@ if __name__ == "__main__":
         .writeStream \
         .outputMode("append") \
         .foreachBatch(format_output_gabungan) \
-        .trigger(processingTime="10 seconds") \
+        .trigger(processingTime="15 seconds") \
         .start()
 
     # Tunggu semua query streaming selesai (tidak akan pernah kecuali dihentikan manual)
