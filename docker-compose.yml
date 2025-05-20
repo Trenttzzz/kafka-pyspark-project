@@ -1,0 +1,44 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0 # Anda bisa menggunakan versi latest atau spesifik
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0 # Anda bisa menggunakan versi latest atau spesifik
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"   # Port untuk komunikasi internal Docker
+      - "29092:29092" # Port untuk komunikasi dari host machine (misalnya producer Python Anda)
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true' # Memudahkan, tapi untuk produksi sebaiknya false dan buat manual
+
+  spark:
+    image: jupyter/pyspark-notebook:spark-3.5.0 # Atau versi lain yang sesuai
+    container_name: spark_pyspark
+    ports:
+      - "8888:8888"  # Port Jupyter Notebook
+      - "4040:4040"  # Port Spark UI
+    volumes:
+      - ./pyspark_consumer.py:/home/jovyan/work/pyspark_consumer.py # Mount script consumer
+      # Jika ada direktori data atau checkpoint yang ingin dipersist
+      # - ./spark_checkpoint:/tmp/spark-checkpoint
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+    # `depends_on` memastikan kafka siap sebelum spark mencoba koneksi awal,
+    # namun untuk streaming, PySpark akan terus mencoba koneksi.
+    depends_on:
+      - kafka
