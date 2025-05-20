@@ -2,7 +2,6 @@
 
 **Nama:** Azza Farichi Tjahjono  
 **NRP:** 5027231071  
-**Tanggal:** 21 Mei 2025  
 
 ## Ringkasan Proyek
 
@@ -26,7 +25,9 @@ Pastikan Docker dan Docker Compose sudah terinstal di sistem Anda.
 Buka terminal di direktori root proyek dan jalankan perintah berikut untuk memulai Zookeeper, Kafka, dan container Spark:
 
 ```bash
-docker-compose up -d
+docker compose up -d ; untuk docker compose V2
+
+docker-compose up -d ; untuk docker compose sebelum V2
 ```
 
 Tunggu beberapa saat hingga semua container berjalan dengan baik. Anda dapat memeriksa status container dengan `docker ps`.
