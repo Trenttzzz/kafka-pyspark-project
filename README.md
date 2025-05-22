@@ -1,13 +1,7 @@
-# Proyek Pemrosesan Data Sensor Gudang Real-time
+# Tugas Hands On Kafka - Pyspark
 
 **Nama:** Azza Farichi Tjahjono  
 **NRP:** 5027231071  
-
-## Ringkasan Proyek
-
-Proyek ini mendemonstrasikan sistem pemrosesan data sensor secara real-time menggunakan Apache Kafka dan Apache Spark (PySpark). Sistem ini dirancang untuk memantau kondisi suhu dan kelembaban di beberapa gudang. Data dari sensor disimulasikan oleh dua producer Kafka yang mengirimkan metrik suhu dan kelembaban setiap detik. Sebuah consumer PySpark kemudian mengonsumsi data ini, melakukan filtering untuk mendeteksi kondisi abnormal (suhu > 80°C atau kelembaban > 70%), dan menggabungkan kedua stream data untuk mengidentifikasi peringatan kritis jika kedua kondisi tersebut terjadi bersamaan di gudang yang sama dalam rentang waktu tertentu.
-
-Tujuan utama proyek ini adalah untuk menunjukkan alur kerja end-to-end dari pengumpulan data sensor, pengiriman melalui message broker, hingga pemrosesan dan analisis real-time untuk pengambilan keputusan cepat.
 
 ## Komponen Utama
 
@@ -16,7 +10,7 @@ Tujuan utama proyek ini adalah untuk menunjukkan alur kerja end-to-end dari peng
 *   **Apache Spark (PySpark) (`pyspark_consumer.py`):** Aplikasi Structured Streaming yang mengonsumsi data dari Kafka, melakukan transformasi, filtering, dan join pada stream data untuk menghasilkan peringatan.
 *   **Docker & Docker Compose:** Digunakan untuk mengelola dan menjalankan lingkungan Kafka (Zookeeper & Kafka broker) dan Spark (Jupyter Notebook dengan PySpark).
 
-## Cara Menjalankan Proyek
+## Cara Menjalankan Tugas
 
 Pastikan Docker dan Docker Compose sudah terinstal di sistem Anda.
 
@@ -71,7 +65,7 @@ spark-submit \\
 
 Consumer akan mulai memproses data dan menampilkan output peringatan di konsol terminal tersebut.
 
-### 4. Menghentikan Proyek
+### 4. Menghentikan Proyek Tugas
 
 Untuk menghentikan semua layanan:
 
@@ -100,7 +94,10 @@ Berikut adalah tempat untuk menyertakan screenshot yang menunjukkan berbagai tah
 
 ### 3. Output Consumer PySpark - Peringatan Individual
 
+![Output Consumer Pyspark - Peringatan Individual](./assets/peringatan_individu.png)
 
 ### 4. Output Consumer PySpark - Peringatan Gabungan (Kritis dan Status Lain)
 
+![Output Consumer PySpark - Peringatan Gabungan](./assets/peringatan_gabungan.png)
 
+![Output Consumer PySpark - Peringatan Gabungan 2](./assets/peringatan_kritis_2.png)
