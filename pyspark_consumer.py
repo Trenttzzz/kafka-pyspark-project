@@ -13,10 +13,6 @@ if __name__ == "__main__":
         .config("spark.default.parallelism", "4") \
         .config("spark.streaming.backpressure.enabled", "true") \
         .getOrCreate()
-        # Pastikan versi spark-sql-kafka-0-10_2.12 cocok dengan versi Spark Anda (3.5.0 dalam contoh ini)
-        # Jika image jupyter/pyspark-notebook sudah menyertakan paket ini, baris .config("spark.jars.packages", ...) mungkin tidak diperlukan.
-        # Namun, lebih aman untuk menyertakannya.
-        # `checkpointLocation` penting untuk fault tolerance pada streaming query.
 
     spark.sparkContext.setLogLevel("WARN") # Mengurangi verbosity log Spark
 
@@ -34,7 +30,7 @@ if __name__ == "__main__":
         StructField("timestamp", StringType(), True) # Baca sebagai string dulu, lalu cast
     ])
 
-    # --- 1. Konsumsi data dari topik sensor-suhu-gudang ---
+    # Konsumsi data dari topik sensor-suhu-gudang ---
     df_suhu_raw = spark \
         .readStream \
         .format("kafka") \
@@ -50,7 +46,7 @@ if __name__ == "__main__":
         .select("data.*") \
         .withColumn("timestamp_suhu", col("timestamp").cast(TimestampType()))
 
-    # --- 2. Konsumsi data dari topik sensor-kelembaban-gudang ---
+    # --- Konsumsi data dari topik sensor-kelembaban-gudang ---
     df_kelembaban_raw = spark \
         .readStream \
         .format("kafka") \
@@ -66,7 +62,7 @@ if __name__ == "__main__":
         .select("data.*") \
         .withColumn("timestamp_kelembaban", col("timestamp").cast(TimestampType()))
 
-    # --- 3a. Filtering: Suhu > 80°C ---
+    # --- Filtering: Suhu > 80°C ---
     df_peringatan_suhu = df_suhu.filter(col("suhu") > 80)
 
     query_peringatan_suhu = df_peringatan_suhu \
@@ -79,7 +75,7 @@ if __name__ == "__main__":
         .trigger(processingTime="10 seconds") \
         .start()
 
-    # --- 3b. Filtering: Kelembaban > 70% ---
+    # --- Filtering: Kelembaban > 70% ---
     df_peringatan_kelembaban = df_kelembaban.filter(col("kelembaban") > 70)
 
     query_peringatan_kelembaban = df_peringatan_kelembaban \
@@ -92,15 +88,12 @@ if __name__ == "__main__":
         .trigger(processingTime="10 seconds") \
         .start()
 
-    # --- 4. Gabungkan Stream dari Dua Sensor (Join) ---
-    # Tambahkan watermark untuk stream joining
+    # --- Gabungkan Stream dari Dua Sensor (Join) ---
     # Watermark mendefinisikan seberapa lama data bisa "terlambat" sebelum dianggap usang untuk operasi stateful.
     df_suhu_watermarked = df_suhu.withWatermark("timestamp_suhu", "20 seconds")
     df_kelembaban_watermarked = df_kelembaban.withWatermark("timestamp_kelembaban", "20 seconds")
 
-    # Kondisi join: gudang_id sama DAN timestamp berada dalam window waktu 10 detik
-    # Kolom `gudang_id` akan ambigu jika tidak di-resolve, jadi kita alias salah satunya.
-    # Dan rename kolom timestamp agar unik sebelum join, atau pilih secara eksplisit setelah join.
+    
     joined_df = df_suhu_watermarked.alias("s").join(
         df_kelembaban_watermarked.alias("k"),
         expr("""
@@ -118,7 +111,7 @@ if __name__ == "__main__":
         col("s.timestamp_suhu").alias("event_time")
     )
 
-    # --- c. Buat Peringatan Gabungan ---
+    # --- Buat Peringatan Gabungan ---
     df_status_gudang = joined_df.withColumn(
         "status",
         when((col("suhu") > 80) & (col("kelembaban") > 70), "Bahaya tinggi! Barang berisiko rusak")
